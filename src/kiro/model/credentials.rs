@@ -57,11 +57,6 @@ impl KiroCredentials {
         Ok(credentials)
     }
 
-    /// 序列化为 JSON 字符串
-    pub fn to_json(&self) -> Result<String, serde_json::Error> {
-        serde_json::to_string(self)
-    }
-
     /// 序列化为格式化的 JSON 字符串
     pub fn to_pretty_json(&self) -> Result<String, serde_json::Error> {
         serde_json::to_string_pretty(self)
@@ -114,7 +109,7 @@ mod tests {
             provider: None,
         };
 
-        let json = creds.to_json().unwrap();
+        let json = creds.to_pretty_json().unwrap();
         assert!(json.contains("accessToken"));
         assert!(json.contains("authMethod"));
         assert!(!json.contains("refreshToken"));
