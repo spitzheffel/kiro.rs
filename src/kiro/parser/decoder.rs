@@ -75,11 +75,6 @@ impl EventStreamDecoder {
         }
     }
 
-    /// 设置最大连续错误数
-    pub fn set_max_errors(&mut self, max: usize) {
-        self.max_errors = max;
-    }
-
     /// 向解码器提供数据
     pub fn feed(&mut self, data: &[u8]) {
         self.buffer.extend_from_slice(data);
@@ -135,27 +130,6 @@ impl EventStreamDecoder {
         }
     }
 
-    /// 解码所有可用的帧
-    ///
-    /// 返回成功解码的帧列表，遇到错误时记录但继续尝试
-    pub fn decode_all(&mut self) -> Vec<ParseResult<Frame>> {
-        let mut results = Vec::new();
-        loop {
-            match self.decode() {
-                Ok(Some(frame)) => results.push(Ok(frame)),
-                Ok(None) => break,
-                Err(e) => {
-                    results.push(Err(e));
-                    // 如果处于恢复状态或缓冲区为空，停止解码
-                    if self.buffer.is_empty() || self.state == DecoderState::Recovering {
-                        break;
-                    }
-                }
-            }
-        }
-        results
-    }
-
     /// 创建解码迭代器
     pub fn decode_iter(&mut self) -> DecodeIter<'_> {
         DecodeIter { decoder: self }
@@ -168,34 +142,6 @@ impl EventStreamDecoder {
         if !self.buffer.is_empty() {
             self.buffer.advance(1);
         }
-    }
-
-    /// 重置解码器状态
-    pub fn reset(&mut self) {
-        self.buffer.clear();
-        self.state = DecoderState::AwaitingData;
-        self.frames_decoded = 0;
-        self.error_count = 0;
-    }
-
-    /// 获取缓冲区中剩余的字节数
-    pub fn buffered_len(&self) -> usize {
-        self.buffer.len()
-    }
-
-    /// 获取已解码的帧数量
-    pub fn frames_decoded(&self) -> usize {
-        self.frames_decoded
-    }
-
-    /// 获取当前状态
-    pub fn state(&self) -> DecoderState {
-        self.state
-    }
-
-    /// 获取当前错误计数
-    pub fn error_count(&self) -> usize {
-        self.error_count
     }
 }
 
@@ -224,20 +170,10 @@ impl<'a> Iterator for DecodeIter<'a> {
 #[cfg(test)]
 mod tests {
     use super::*;
-
-    #[test]
-    fn test_decoder_new() {
-        let decoder = EventStreamDecoder::new();
-        assert_eq!(decoder.buffered_len(), 0);
-        assert_eq!(decoder.frames_decoded(), 0);
-        assert_eq!(decoder.state(), DecoderState::AwaitingData);
-    }
-
     #[test]
     fn test_decoder_feed() {
         let mut decoder = EventStreamDecoder::new();
         decoder.feed(&[1, 2, 3, 4]);
-        assert_eq!(decoder.buffered_len(), 4);
     }
 
     #[test]
@@ -247,14 +183,5 @@ mod tests {
 
         let result = decoder.decode();
         assert!(matches!(result, Ok(None)));
-    }
-
-    #[test]
-    fn test_decoder_reset() {
-        let mut decoder = EventStreamDecoder::new();
-        decoder.feed(&[1, 2, 3, 4]);
-        decoder.reset();
-        assert_eq!(decoder.buffered_len(), 0);
-        assert_eq!(decoder.frames_decoded(), 0);
     }
 }
