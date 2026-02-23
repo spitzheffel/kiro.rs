@@ -253,7 +253,6 @@ fn generate_websearch_events(
                 "model": model,
                 "content": [],
                 "stop_reason": null,
-                "stop_sequence": null,
                 "usage": {
                     "input_tokens": input_tokens,
                     "output_tokens": 0,
@@ -299,6 +298,8 @@ fn generate_websearch_events(
     ));
 
     // 3. content_block_start (server_tool_use, index 1)
+    // server_tool_use 是服务端工具，input 在 content_block_start 中一次性完整发送，
+    // 不像客户端 tool_use 需要通过 input_json_delta 增量传输。
     events.push(SseEvent::new(
         "content_block_start",
         json!({
@@ -308,26 +309,12 @@ fn generate_websearch_events(
                 "id": tool_use_id,
                 "type": "server_tool_use",
                 "name": "web_search",
-                "input": {}
+                "input": {"query": query}
             }
         }),
     ));
 
-    // 4. content_block_delta (input_json_delta)
-    let input_json = json!({"query": query});
-    events.push(SseEvent::new(
-        "content_block_delta",
-        json!({
-            "type": "content_block_delta",
-            "index": 1,
-            "delta": {
-                "type": "input_json_delta",
-                "partial_json": serde_json::to_string(&input_json).unwrap_or_default()
-            }
-        }),
-    ));
-
-    // 5. content_block_stop (server_tool_use)
+    // 4. content_block_stop (server_tool_use)
     events.push(SseEvent::new(
         "content_block_stop",
         json!({
@@ -336,7 +323,8 @@ fn generate_websearch_events(
         }),
     ));
 
-    // 6. content_block_start (web_search_tool_result, index 2)
+    // 5. content_block_start (web_search_tool_result, index 2)
+    // 官方 API 的 web_search_tool_result 没有 tool_use_id 字段
     let search_content = if let Some(ref results) = search_results {
         results
             .results
@@ -366,13 +354,12 @@ fn generate_websearch_events(
             "index": 2,
             "content_block": {
                 "type": "web_search_tool_result",
-                "tool_use_id": tool_use_id,
                 "content": search_content
             }
         }),
     ));
 
-    // 7. content_block_stop (web_search_tool_result)
+    // 6. content_block_stop (web_search_tool_result)
     events.push(SseEvent::new(
         "content_block_stop",
         json!({
@@ -381,7 +368,7 @@ fn generate_websearch_events(
         }),
     ));
 
-    // 8. content_block_start (text, index 3)
+    // 7. content_block_start (text, index 3)
     events.push(SseEvent::new(
         "content_block_start",
         json!({
@@ -394,7 +381,7 @@ fn generate_websearch_events(
         }),
     ));
 
-    // 9. content_block_delta (text_delta) - 生成搜索结果摘要
+    // 8. content_block_delta (text_delta) - 生成搜索结果摘要
     let summary = generate_search_summary(query, &search_results);
 
     // 分块发送文本
@@ -414,7 +401,7 @@ fn generate_websearch_events(
         ));
     }
 
-    // 10. content_block_stop (text)
+    // 9. content_block_stop (text)
     events.push(SseEvent::new(
         "content_block_stop",
         json!({
@@ -424,14 +411,14 @@ fn generate_websearch_events(
     ));
 
     // 10. message_delta
+    // 官方 API 的 message_delta.delta 中没有 stop_sequence 字段
     let output_tokens = (summary.len() as i32 + 3) / 4; // 简单估算
     events.push(SseEvent::new(
         "message_delta",
         json!({
             "type": "message_delta",
             "delta": {
-                "stop_reason": "end_turn",
-                "stop_sequence": null
+                "stop_reason": "end_turn"
             },
             "usage": {
                 "output_tokens": output_tokens,
