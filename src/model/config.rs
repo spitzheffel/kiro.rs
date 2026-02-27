@@ -176,6 +176,12 @@ pub struct CloudPassConfig {
     /// 客户端版本号（可选，默认 1.1.2）
     #[serde(default = "default_cloud_pass_version")]
     pub client_version: String,
+
+    /// 固定 Machine ID（可选）
+    /// 注入凭证时使用此值作为 machineId，确保与 API 绑定的 machineId 一致
+    /// 未配置时使用 Cloud Pass 的 deviceId
+    #[serde(default)]
+    pub machine_id: Option<String>,
 }
 
 impl Default for Config {

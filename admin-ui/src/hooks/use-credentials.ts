@@ -10,6 +10,7 @@ import {
   getLoadBalancingMode,
   setLoadBalancingMode,
   getCloudPassStatus,
+  refreshCloudPass,
 } from '@/api/credentials'
 import type { AddCredentialRequest } from '@/types/api'
 
@@ -115,5 +116,20 @@ export function useCloudPassStatus() {
     queryFn: getCloudPassStatus,
     refetchInterval: 30000, // 每 30 秒刷新
     retry: false,
+  })
+}
+
+// 手动刷新 Cloud Pass
+export function useRefreshCloudPass() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: refreshCloudPass,
+    onSuccess: () => {
+      // 刷新后延迟 2 秒再更新状态，给 worker 时间完成刷新
+      setTimeout(() => {
+        queryClient.invalidateQueries({ queryKey: ['cloudPassStatus'] })
+        queryClient.invalidateQueries({ queryKey: ['credentials'] })
+      }, 2000)
+    },
   })
 }

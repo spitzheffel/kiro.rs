@@ -1358,7 +1358,8 @@ impl MultiTokenManager {
         };
 
         // 检查是否需要刷新 token
-        let needs_refresh = is_token_expired(&credentials) || is_token_expiring_soon(&credentials);
+        let needs_refresh =
+            is_token_expired(&credentials) || is_token_expiring_soon(&credentials);
 
         let token = if needs_refresh {
             let _guard = self.refresh_lock.lock().await;

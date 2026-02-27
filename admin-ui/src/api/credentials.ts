@@ -103,3 +103,9 @@ export async function getCloudPassStatus(): Promise<CloudPassStatus> {
   const { data } = await api.get<CloudPassStatus>('/cloud-pass/status')
   return data
 }
+
+// 手动刷新 Cloud Pass
+export async function refreshCloudPass(): Promise<SuccessResponse> {
+  const { data } = await api.post<SuccessResponse>('/cloud-pass/refresh')
+  return data
+}

@@ -35,7 +35,7 @@ pub async fn start_cloud_pass_worker(
     tokio::time::sleep(Duration::from_secs(5)).await;
 
     loop {
-        match do_refresh(&client, &token_manager, reassign, &state).await {
+        match do_refresh(&client, &token_manager, reassign, &state, &config).await {
             Ok(()) => {
                 tracing::info!("Cloud Pass 凭证刷新成功");
             }
@@ -50,7 +50,14 @@ pub async fn start_cloud_pass_worker(
             tracing::warn!("Cloud Pass 心跳失败: {}", e);
         }
 
-        tokio::time::sleep(interval).await;
+        // 等待定时刷新或手动刷新信号
+        let notify = state.wait_for_refresh();
+        tokio::select! {
+            _ = tokio::time::sleep(interval) => {},
+            _ = notify.notified() => {
+                tracing::info!("Cloud Pass 收到手动刷新请求");
+            },
+        }
     }
 }
 
@@ -60,6 +67,7 @@ async fn do_refresh(
     token_manager: &MultiTokenManager,
     reassign: bool,
     state: &CloudPassState,
+    config: &CloudPassConfig,
 ) -> anyhow::Result<()> {
     // 获取凭证
     let creds = client.get_credentials(reassign).await?;
@@ -76,7 +84,7 @@ async fn do_refresh(
             if creds.kicked {
                 anyhow::bail!("重新抢占后仍被踢出，请检查激活码");
             }
-            return inject_credentials(client, token_manager, &creds, state).await;
+            return inject_credentials(client, token_manager, &creds, state, config).await;
         }
         anyhow::bail!("设备已被踢出，启用 reassign 可自动抢占");
     }
@@ -85,7 +93,7 @@ async fn do_refresh(
         tracing::info!("Cloud Pass license 有效至: {}", expires);
     }
 
-    inject_credentials(client, token_manager, &creds, state).await
+    inject_credentials(client, token_manager, &creds, state, config).await
 }
 
 /// 将凭证注入到 token_manager
@@ -94,6 +102,7 @@ async fn inject_credentials(
     token_manager: &MultiTokenManager,
     creds: &super::model::ResolvedCredentials,
     state: &CloudPassState,
+    config: &CloudPassConfig,
 ) -> anyhow::Result<()> {
     let refresh_token = creds
         .refresh_token
@@ -114,7 +123,7 @@ async fn inject_credentials(
         region: creds.region.clone(),
         auth_region: None,
         api_region: None,
-        machine_id: None, // 由 generate_from_credentials 根据 refreshToken 自动生成
+        machine_id: config.machine_id.clone().or_else(|| Some(client.device_id().to_string())), // 优先使用配置的固定 machineId，否则用 deviceId
         email: None,
         subscription_title: None,
         proxy_url: None,

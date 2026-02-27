@@ -8,7 +8,7 @@ use axum::{
 use super::{
     handlers::{
         add_credential, delete_credential, get_all_credentials, get_cloud_pass_status,
-        get_credential_balance, get_load_balancing_mode, reset_failure_count,
+        get_credential_balance, get_load_balancing_mode, refresh_cloud_pass, reset_failure_count,
         set_credential_disabled, set_credential_priority, set_load_balancing_mode,
     },
     middleware::{AdminState, admin_auth_middleware},
@@ -47,6 +47,7 @@ pub fn create_admin_router(state: AdminState) -> Router {
             get(get_load_balancing_mode).put(set_load_balancing_mode),
         )
         .route("/cloud-pass/status", get(get_cloud_pass_status))
+        .route("/cloud-pass/refresh", post(refresh_cloud_pass))
         .layer(middleware::from_fn_with_state(
             state.clone(),
             admin_auth_middleware,

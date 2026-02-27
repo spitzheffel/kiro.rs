@@ -12,7 +12,7 @@ import { AddCredentialDialog } from '@/components/add-credential-dialog'
 import { BatchImportDialog } from '@/components/batch-import-dialog'
 import { KamImportDialog } from '@/components/kam-import-dialog'
 import { BatchVerifyDialog, type VerifyResult } from '@/components/batch-verify-dialog'
-import { useCredentials, useDeleteCredential, useResetFailure, useLoadBalancingMode, useSetLoadBalancingMode, useCloudPassStatus } from '@/hooks/use-credentials'
+import { useCredentials, useDeleteCredential, useResetFailure, useLoadBalancingMode, useSetLoadBalancingMode, useCloudPassStatus, useRefreshCloudPass } from '@/hooks/use-credentials'
 import { getCredentialBalance } from '@/api/credentials'
 import { extractErrorMessage } from '@/lib/utils'
 import type { BalanceResponse } from '@/types/api'
@@ -53,6 +53,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   const { data: loadBalancingData, isLoading: isLoadingMode } = useLoadBalancingMode()
   const { mutate: setLoadBalancingMode, isPending: isSettingMode } = useSetLoadBalancingMode()
   const { data: cloudPassStatus } = useCloudPassStatus()
+  const { mutate: triggerCloudPassRefresh, isPending: isRefreshingCloudPass } = useRefreshCloudPass()
 
   // 计算分页
   const totalPages = Math.ceil((data?.credentials.length || 0) / itemsPerPage)
@@ -564,13 +565,33 @@ export function Dashboard({ onLogout }: DashboardProps) {
         {cloudPassStatus?.enabled && (
           <Card className="mb-6">
             <CardHeader className="pb-2">
-              <CardTitle className="text-sm font-medium flex items-center gap-2">
-                <span className={`inline-block w-2 h-2 rounded-full ${cloudPassStatus.connected ? 'bg-green-500' : 'bg-red-500'}`} />
-                Cloud Pass
-                {cloudPassStatus.kicked && (
-                  <Badge variant="destructive">已被踢出</Badge>
-                )}
-              </CardTitle>
+              <div className="flex items-center justify-between">
+                <CardTitle className="text-sm font-medium flex items-center gap-2">
+                  <span className={`inline-block w-2 h-2 rounded-full ${cloudPassStatus.connected ? 'bg-green-500' : 'bg-red-500'}`} />
+                  Cloud Pass
+                  {cloudPassStatus.kicked && (
+                    <Badge variant="destructive">已被踢出</Badge>
+                  )}
+                </CardTitle>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => {
+                    triggerCloudPassRefresh(undefined, {
+                      onSuccess: () => {
+                        toast.success('已触发 Cloud Pass 手动刷新')
+                      },
+                      onError: (error) => {
+                        toast.error(`刷新失败: ${extractErrorMessage(error)}`)
+                      },
+                    })
+                  }}
+                  disabled={isRefreshingCloudPass}
+                >
+                  <RefreshCw className={`h-4 w-4 mr-1 ${isRefreshingCloudPass ? 'animate-spin' : ''}`} />
+                  {isRefreshingCloudPass ? '刷新中...' : '手动刷新'}
+                </Button>
+              </div>
             </CardHeader>
             <CardContent>
               <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">

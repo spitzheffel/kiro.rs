@@ -6,11 +6,14 @@ use std::sync::Arc;
 
 use parking_lot::RwLock;
 use serde::Serialize;
+use tokio::sync::Notify;
 
 /// Cloud Pass 运行时状态（线程安全共享）
 #[derive(Clone)]
 pub struct CloudPassState {
     inner: Arc<RwLock<CloudPassStatusInner>>,
+    /// 手动刷新通知器
+    refresh_notify: Arc<Notify>,
 }
 
 /// 内部状态数据
@@ -55,6 +58,7 @@ impl CloudPassState {
     /// 创建未启用的空状态
     pub fn disabled() -> Self {
         Self {
+            refresh_notify: Arc::new(Notify::new()),
             inner: Arc::new(RwLock::new(CloudPassStatusInner {
                 enabled: false,
                 connected: false,
@@ -92,6 +96,7 @@ impl CloudPassState {
         };
 
         Self {
+            refresh_notify: Arc::new(Notify::new()),
             inner: Arc::new(RwLock::new(CloudPassStatusInner {
                 enabled: true,
                 connected: false,
@@ -158,5 +163,15 @@ impl CloudPassState {
     /// 获取设备 ID
     pub fn device_id(&self) -> String {
         self.inner.read().device_id.clone()
+    }
+
+    /// 触发手动刷新
+    pub fn trigger_refresh(&self) {
+        self.refresh_notify.notify_one();
+    }
+
+    /// 等待手动刷新通知
+    pub fn wait_for_refresh(&self) -> Arc<Notify> {
+        self.refresh_notify.clone()
     }
 }

@@ -136,3 +136,21 @@ pub async fn get_cloud_pass_status(State(state): State<AdminState>) -> impl Into
         .into_response(),
     }
 }
+
+/// POST /api/admin/cloud-pass/refresh
+/// 手动触发 Cloud Pass 凭证刷新
+pub async fn refresh_cloud_pass(State(state): State<AdminState>) -> impl IntoResponse {
+    match &state.cloud_pass_state {
+        Some(cp_state) => {
+            cp_state.trigger_refresh();
+            Json(SuccessResponse::new("已触发 Cloud Pass 手动刷新".to_string())).into_response()
+        }
+        None => (
+            axum::http::StatusCode::BAD_REQUEST,
+            Json(serde_json::json!({
+                "error": "Cloud Pass 未启用"
+            })),
+        )
+            .into_response(),
+    }
+}
