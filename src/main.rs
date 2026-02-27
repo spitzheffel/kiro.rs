@@ -1,6 +1,7 @@
 mod admin;
 mod admin_ui;
 mod anthropic;
+mod cloud_pass;
 mod common;
 mod http_client;
 mod kiro;
@@ -101,6 +102,23 @@ async fn main() {
         tls_backend: config.tls_backend,
     });
 
+    // 创建 Cloud Pass 共享状态
+    let cloud_pass_state = if let Some(ref cp_config) = config.cloud_pass {
+        // 先创建临时 client 获取 device_id
+        let temp_client = cloud_pass::client::CloudPassClient::new(cp_config);
+        let device_id = temp_client.device_id().to_string();
+        Some(cloud_pass::state::CloudPassState::from_config(
+            &cp_config.server_url,
+            &device_id,
+            &cp_config.license_code,
+            cp_config.refresh_interval,
+            cp_config.reassign,
+            &cp_config.client_version,
+        ))
+    } else {
+        None
+    };
+
     // 构建 Anthropic API 路由（从第一个凭据获取 profile_arn）
     let anthropic_app = anthropic::create_router_with_provider(
         &api_key,
@@ -122,7 +140,10 @@ async fn main() {
             anthropic_app
         } else {
             let admin_service = admin::AdminService::new(token_manager.clone());
-            let admin_state = admin::AdminState::new(admin_key, admin_service);
+            let mut admin_state = admin::AdminState::new(admin_key, admin_service);
+            if let Some(ref cp_state) = cloud_pass_state {
+                admin_state = admin_state.with_cloud_pass(cp_state.clone());
+            }
             let admin_app = admin::create_admin_router(admin_state);
 
             // 创建 Admin UI 路由
@@ -155,6 +176,20 @@ async fn main() {
         tracing::info!("  GET  /api/admin/credentials/:index/balance");
         tracing::info!("Admin UI:");
         tracing::info!("  GET  /admin");
+        if cloud_pass_state.is_some() {
+            tracing::info!("Cloud Pass API:");
+            tracing::info!("  GET  /api/admin/cloud-pass/status");
+        }
+    }
+
+    // 启动 Cloud Pass 后台刷新任务（如果配置了）
+    if let Some(cloud_pass_config) = config.cloud_pass.clone() {
+        tracing::info!("Cloud Pass 已配置，启动后台凭证刷新任务");
+        let tm = token_manager.clone();
+        let cp_state = cloud_pass_state.clone().unwrap();
+        tokio::spawn(async move {
+            cloud_pass::worker::start_cloud_pass_worker(tm, cloud_pass_config, cp_state).await;
+        });
     }
 
     let listener = tokio::net::TcpListener::bind(&addr).await.unwrap();

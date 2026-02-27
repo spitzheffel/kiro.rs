@@ -90,6 +90,11 @@ pub struct Config {
     #[serde(default = "default_load_balancing_mode")]
     pub load_balancing_mode: String,
 
+    /// Cloud Pass 配置（从 eskysoft 服务器自动获取凭证）
+    #[serde(default)]
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub cloud_pass: Option<CloudPassConfig>,
+
     /// 配置文件路径（运行时元数据，不写入 JSON）
     #[serde(skip)]
     config_path: Option<PathBuf>,
@@ -132,6 +137,47 @@ fn default_load_balancing_mode() -> String {
     "priority".to_string()
 }
 
+fn default_cloud_pass_server() -> String {
+    "http://kiro.eskysoft.com:9123".to_string()
+}
+
+fn default_cloud_pass_interval() -> u64 {
+    900
+}
+
+fn default_cloud_pass_version() -> String {
+    "1.1.2".to_string()
+}
+
+/// Cloud Pass 配置
+/// 用于从 kiro-cloud-pass 服务器自动获取和刷新凭证
+#[derive(Debug, Clone, Serialize, Deserialize)]
+#[serde(rename_all = "camelCase")]
+pub struct CloudPassConfig {
+    /// 激活码（必填）
+    pub license_code: String,
+
+    /// 设备 ID（可选，默认从 ~/.kiro-device-id 读取）
+    #[serde(default)]
+    pub device_id: Option<String>,
+
+    /// 服务器地址（可选，默认 http://kiro.eskysoft.com:9123）
+    #[serde(default = "default_cloud_pass_server")]
+    pub server_url: String,
+
+    /// 刷新间隔（秒，默认 900 = 15分钟）
+    #[serde(default = "default_cloud_pass_interval")]
+    pub refresh_interval: u64,
+
+    /// 是否启用强制抢占（可选，默认 false）
+    #[serde(default)]
+    pub reassign: bool,
+
+    /// 客户端版本号（可选，默认 1.1.2）
+    #[serde(default = "default_cloud_pass_version")]
+    pub client_version: String,
+}
+
 impl Default for Config {
     fn default() -> Self {
         Self {
@@ -154,6 +200,7 @@ impl Default for Config {
             proxy_password: None,
             admin_api_key: None,
             load_balancing_mode: default_load_balancing_mode(),
+            cloud_pass: None,
             config_path: None,
         }
     }

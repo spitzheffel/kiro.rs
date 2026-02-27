@@ -124,3 +124,15 @@ pub async fn set_load_balancing_mode(
         Err(e) => (e.status_code(), Json(e.into_response())).into_response(),
     }
 }
+
+/// GET /api/admin/cloud-pass/status
+/// 获取 Cloud Pass 运行时状态
+pub async fn get_cloud_pass_status(State(state): State<AdminState>) -> impl IntoResponse {
+    match &state.cloud_pass_state {
+        Some(cp_state) => Json(serde_json::json!(cp_state.snapshot())).into_response(),
+        None => Json(serde_json::json!({
+            "enabled": false
+        }))
+        .into_response(),
+    }
+}

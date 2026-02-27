@@ -32,3 +32,6 @@ parking_lot = "0.12"  # 高性能同步原语
 subtle = "2.6"        # 常量时间比较（防止时序攻击）
 rust-embed = "8"      # 嵌入静态文件
 mime_guess = "2"      # MIME 类型推断
+rsa = { version = "0.9", features = ["pem"] }  # RSA 解密（Cloud Pass）
+aes-gcm = "0.10"      # AES-256-GCM 解密（Cloud Pass）
+base64 = "0.22"       # Base64 编解码

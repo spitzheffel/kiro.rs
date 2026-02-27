@@ -12,6 +12,7 @@ use axum::{
 
 use super::service::AdminService;
 use super::types::AdminErrorResponse;
+use crate::cloud_pass::state::CloudPassState;
 use crate::common::auth;
 
 /// Admin API 共享状态
@@ -21,6 +22,8 @@ pub struct AdminState {
     pub admin_api_key: String,
     /// Admin 服务
     pub service: Arc<AdminService>,
+    /// Cloud Pass 运行时状态
+    pub cloud_pass_state: Option<CloudPassState>,
 }
 
 impl AdminState {
@@ -28,7 +31,13 @@ impl AdminState {
         Self {
             admin_api_key: admin_api_key.into(),
             service: Arc::new(service),
+            cloud_pass_state: None,
         }
+    }
+
+    pub fn with_cloud_pass(mut self, state: CloudPassState) -> Self {
+        self.cloud_pass_state = Some(state);
+        self
     }
 }
 

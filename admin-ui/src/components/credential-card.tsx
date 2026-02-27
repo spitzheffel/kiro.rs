@@ -30,6 +30,7 @@ interface CredentialCardProps {
   onToggleSelect: () => void
   balance: BalanceResponse | null
   loadingBalance: boolean
+  cloudPassCredentialId?: number
 }
 
 function formatLastUsed(lastUsedAt: string | null): string {
@@ -55,6 +56,7 @@ export function CredentialCard({
   onToggleSelect,
   balance,
   loadingBalance,
+  cloudPassCredentialId,
 }: CredentialCardProps) {
   const [editingPriority, setEditingPriority] = useState(false)
   const [priorityValue, setPriorityValue] = useState(String(credential.priority))
@@ -64,6 +66,8 @@ export function CredentialCard({
   const setPriority = useSetPriority()
   const resetFailure = useResetFailure()
   const deleteCredential = useDeleteCredential()
+
+  const isCloudPass = !!(cloudPassCredentialId && credential.id === cloudPassCredentialId)
 
   const handleToggleDisabled = () => {
     setDisabled.mutate(
@@ -145,6 +149,9 @@ export function CredentialCard({
                 )}
                 {credential.disabled && (
                   <Badge variant="destructive">已禁用</Badge>
+                )}
+                {isCloudPass && (
+                  <Badge variant="outline">Cloud Pass</Badge>
                 )}
               </CardTitle>
             </div>

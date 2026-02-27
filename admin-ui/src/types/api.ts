@@ -22,6 +22,7 @@ export interface CredentialStatusItem {
   lastUsedAt: string | null
   hasProxy: boolean
   proxyUrl?: string
+  machineId?: string
 }
 
 // 余额响应
@@ -79,4 +80,24 @@ export interface AddCredentialResponse {
   message: string
   credentialId: number
   email?: string
+}
+
+// Cloud Pass 运行时状态
+export interface CloudPassStatus {
+  enabled: boolean
+  connected: boolean
+  serverUrl: string
+  deviceId: string
+  licenseCodeMasked: string
+  refreshInterval: number
+  reassign: boolean
+  clientVersion: string
+  lastRefreshAt: string | null
+  lastRefreshOk: boolean
+  lastRefreshError: string | null
+  refreshSuccessCount: number
+  refreshFailureCount: number
+  licenseExpiresAt: string | null
+  kicked: boolean
+  injectedCredentialId: number | null
 }

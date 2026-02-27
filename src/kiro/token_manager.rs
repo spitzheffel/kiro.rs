@@ -459,6 +459,9 @@ pub struct CredentialEntrySnapshot {
     /// 代理 URL（用于前端展示）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub proxy_url: Option<String>,
+    /// 凭据级 Machine ID（用于标识 Cloud Pass 来源）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub machine_id: Option<String>,
 }
 
 /// 凭据管理器状态快照
@@ -1275,6 +1278,7 @@ impl MultiTokenManager {
                     last_used_at: e.last_used_at.clone(),
                     has_proxy: e.credentials.proxy_url.is_some(),
                     proxy_url: e.credentials.proxy_url.clone(),
+                    machine_id: e.credentials.machine_id.clone(),
                 })
                 .collect(),
             current_id,

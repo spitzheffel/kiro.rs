@@ -9,6 +9,7 @@ import {
   deleteCredential,
   getLoadBalancingMode,
   setLoadBalancingMode,
+  getCloudPassStatus,
 } from '@/api/credentials'
 import type { AddCredentialRequest } from '@/types/api'
 
@@ -104,5 +105,15 @@ export function useSetLoadBalancingMode() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['loadBalancingMode'] })
     },
+  })
+}
+
+// 获取 Cloud Pass 状态
+export function useCloudPassStatus() {
+  return useQuery({
+    queryKey: ['cloudPassStatus'],
+    queryFn: getCloudPassStatus,
+    refetchInterval: 30000, // 每 30 秒刷新
+    retry: false,
   })
 }

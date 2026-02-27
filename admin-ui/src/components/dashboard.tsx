@@ -12,7 +12,7 @@ import { AddCredentialDialog } from '@/components/add-credential-dialog'
 import { BatchImportDialog } from '@/components/batch-import-dialog'
 import { KamImportDialog } from '@/components/kam-import-dialog'
 import { BatchVerifyDialog, type VerifyResult } from '@/components/batch-verify-dialog'
-import { useCredentials, useDeleteCredential, useResetFailure, useLoadBalancingMode, useSetLoadBalancingMode } from '@/hooks/use-credentials'
+import { useCredentials, useDeleteCredential, useResetFailure, useLoadBalancingMode, useSetLoadBalancingMode, useCloudPassStatus } from '@/hooks/use-credentials'
 import { getCredentialBalance } from '@/api/credentials'
 import { extractErrorMessage } from '@/lib/utils'
 import type { BalanceResponse } from '@/types/api'
@@ -52,6 +52,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
   const { mutate: resetFailure } = useResetFailure()
   const { data: loadBalancingData, isLoading: isLoadingMode } = useLoadBalancingMode()
   const { mutate: setLoadBalancingMode, isPending: isSettingMode } = useSetLoadBalancingMode()
+  const { data: cloudPassStatus } = useCloudPassStatus()
 
   // 计算分页
   const totalPages = Math.ceil((data?.credentials.length || 0) / itemsPerPage)
@@ -559,6 +560,69 @@ export function Dashboard({ onLogout }: DashboardProps) {
           </Card>
         </div>
 
+        {/* Cloud Pass 状态卡片 */}
+        {cloudPassStatus?.enabled && (
+          <Card className="mb-6">
+            <CardHeader className="pb-2">
+              <CardTitle className="text-sm font-medium flex items-center gap-2">
+                <span className={`inline-block w-2 h-2 rounded-full ${cloudPassStatus.connected ? 'bg-green-500' : 'bg-red-500'}`} />
+                Cloud Pass
+                {cloudPassStatus.kicked && (
+                  <Badge variant="destructive">已被踢出</Badge>
+                )}
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                <div>
+                  <span className="text-muted-foreground">服务器：</span>
+                  <span className="font-medium">{cloudPassStatus.serverUrl}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">设备 ID：</span>
+                  <span className="font-medium font-mono text-xs">{cloudPassStatus.deviceId.slice(0, 12)}...</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">激活码：</span>
+                  <span className="font-medium">{cloudPassStatus.licenseCodeMasked}</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">刷新间隔：</span>
+                  <span className="font-medium">{cloudPassStatus.refreshInterval}s</span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">上次刷新：</span>
+                  <span className="font-medium">
+                    {cloudPassStatus.lastRefreshAt
+                      ? new Date(cloudPassStatus.lastRefreshAt).toLocaleTimeString()
+                  : '未刷新'}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">刷新状态：</span>
+                  <span className={cloudPassStatus.lastRefreshOk ? 'text-green-600 font-medium' : 'text-red-500 font-medium'}>
+                    {cloudPassStatus.lastRefreshOk ? '成功' : (cloudPassStatus.lastRefreshError || '未刷新')}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">成功/失败：</span>
+                  <span className="font-medium">
+                    {cloudPassStatus.refreshSuccessCount}/{cloudPassStatus.refreshFailureCount}
+                  </span>
+                </div>
+                <div>
+                  <span className="text-muted-foreground">License 到期：</span>
+                  <span className="font-medium">
+                    {cloudPassStatus.licenseExpiresAt
+                      ? new Date(cloudPassStatus.licenseExpiresAt).toLocaleString()
+                      : '未知'}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+        )}
+
         {/* 凭据列表 */}
         <div className="space-y-4">
           <div className="flex items-center justify-between">
@@ -658,6 +722,7 @@ export function Dashboard({ onLogout }: DashboardProps) {
                     onToggleSelect={() => toggleSelect(credential.id)}
                     balance={balanceMap.get(credential.id) || null}
                     loadingBalance={loadingBalanceIds.has(credential.id)}
+                    cloudPassCredentialId={cloudPassStatus?.enabled ? (cloudPassStatus.injectedCredentialId ?? undefined) : undefined}
                   />
                 ))}
               </div>

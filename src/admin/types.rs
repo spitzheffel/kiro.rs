@@ -51,6 +51,9 @@ pub struct CredentialStatusItem {
     /// 代理 URL（用于前端展示）
     #[serde(skip_serializing_if = "Option::is_none")]
     pub proxy_url: Option<String>,
+    /// 凭据级 Machine ID（用于标识 Cloud Pass 来源）
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub machine_id: Option<String>,
 }
 
 // ============ 操作请求 ============

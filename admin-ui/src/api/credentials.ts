@@ -8,6 +8,7 @@ import type {
   SetPriorityRequest,
   AddCredentialRequest,
   AddCredentialResponse,
+  CloudPassStatus,
 } from '@/types/api'
 
 // 创建 axios 实例
@@ -94,5 +95,11 @@ export async function getLoadBalancingMode(): Promise<{ mode: 'priority' | 'bala
 // 设置负载均衡模式
 export async function setLoadBalancingMode(mode: 'priority' | 'balanced'): Promise<{ mode: 'priority' | 'balanced' }> {
   const { data } = await api.put<{ mode: 'priority' | 'balanced' }>('/config/load-balancing', { mode })
+  return data
+}
+
+// 获取 Cloud Pass 状态
+export async function getCloudPassStatus(): Promise<CloudPassStatus> {
+  const { data } = await api.get<CloudPassStatus>('/cloud-pass/status')
   return data
 }
